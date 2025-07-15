@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Editor de Notas Markdown</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root {
+      --bg: #f7f7f7;
+      --fg: #222;
+      --note-bg: #fff;
+      --border: #ddd;
+      --accent: #4caf50;
+    }
+    [data-theme="dark"] {
+      --bg: #181a1b;
+      --fg: #eee;
+      --note-bg: #23272a;
+      --border: #333;
+      --accent: #81c784;
+    }
+    body {
+      background: var(--bg);
+      color: var(--fg);
+      font-family: Arial, sans-serif;
+      margin: 0;
+      min-height: 100vh;
+      transition: background 0.2s, color 0.2s;
+    }
+    .container {
+      max-width: 900px;
+      margin: 40px auto;
+      background: var(--note-bg);
+      border-radius: 10px;
+      box-shadow: 0 2px 8px #0001;
+      padding: 24px;
+      display: flex;
+      gap: 24px;
+      border: 1px solid var(--border);
+    }
+    .sidebar {
+      width: 220px;
+      min-width: 180px;
+      border-right: 1px solid var(--border);
+      padding-right: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .sidebar h2 {
+      font-size: 1.1em;
+      margin: 0 0 8px 0;
+    }
+    .note-list {
+      flex: 1;
+      overflow-y: auto;
+      max-height: 60vh;
+    }
+    .note-list button {
+      width: 100%;
+      text-align: left;
+      background: none;
+      border: none;
+      padding: 8px;
+      border-radius: 5px;
+      cursor: pointer;
+      color: var(--fg);
+      transition: background 0.15s;
+    }
+    .note-list button.selected, .note-list button:hover {
+      background: var(--accent);
+      color: #fff;
+    }
+    .add-btn {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      padding: 8px;
+      margin-top: 8px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background 0.2s;
+    }
+    .add-btn:hover { background: #388e3c; }
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .note-title {
+      font-size: 1.2em;
+      padding: 8px;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      width: 100%;
+      margin-bottom: 8px;
+      background: var(--bg);
+      color: var(--fg);
+    }
+    .note-editor {
+      width: 100%;
+      min-height: 120px;
+      font-size: 1em;
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      resize: vertical;
+      background: var(--bg);
+      color: var(--fg);
+    }
+    .note-actions {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .delete-btn {
+      background: #e53935;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      padding: 8px 12px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background 0.2s;
+    }
+    .delete-btn:hover { background: #b71c1c; }
+    .theme-btn {
+      background: var(--border);
+      color: var(--fg);
+      border: none;
+      border-radius: 5px;
+      padding: 8px 12px;
+      cursor: pointer;
+      font-weight: bold;
+      margin-left: auto;
+      transition: background 0.2s;
+    }
+    .theme-btn:hover { background: var(--accent); color: #fff; }
+    .markdown-preview {
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      background: var(--bg);
+      padding: 12px;
+      min-height: 120px;
+      margin-top: 8px;
+      overflow-x: auto;
+    }
+    @media (max-width: 900px) {
+      .container { flex-direction: column; padding: 10px; }
+      .sidebar { border-right: none; border-bottom: 1px solid var(--border); padding-right: 0; padding-bottom: 12px; }
+    }
+  </style>
+  <!-- CDN do marked.js para renderizar Markdown -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+  <div class="container">
+    <div class="sidebar">
+      <h2>Notas</h2>
+      <div class="note-list" id="note-list"></div>
+      <button class="add-btn" onclick="novaNota()">+ Nova Nota</button>
+      <button class="theme-btn" onclick="alternarTema()" id="theme-btn">Modo Escuro</button>
+    </div>
+    <div class="main">
+      <input id="note-title" class="note-title" placeholder="Título da nota"/>
+      <textarea id="note-editor" class="note-editor" placeholder="Escreva sua nota em Markdown..."></textarea>
+      <div class="note-actions">
+        <button class="delete-btn" onclick="excluirNota()">Excluir Nota</button>
+      </div>
+      <div class="markdown-preview" id="markdown-preview"></div>
+    </div>
+  </div>
+  <script>
+    // --- Tema claro/escuro ---
+    function alternarTema() {
+      const atual = document.body.getAttribute('data-theme');
+      if (atual === 'dark') {
+        document.body.removeAttribute('data-theme');
+        document.getElementById('theme-btn').textContent = 'Modo Escuro';
+        localStorage.setItem('notas-tema', 'light');
+      } else {
+        document.body.setAttribute('data-theme', 'dark');
+        document.getElementById('theme-btn').textContent = 'Modo Claro';
+        localStorage.setItem('notas-tema', 'dark');
+      }
+    }
+    if (localStorage.getItem('notas-tema') === 'dark') {
+      document.body.setAttribute('data-theme', 'dark');
+      document.getElementById('theme-btn').textContent = 'Modo Claro';
+    }
+
+    // --- Notas ---
+    let notas = JSON.parse(localStorage.getItem('notas-md') || '[]');
+    let notaAtual = null;
+
+    function salvarNotas() {
+      localStorage.setItem('notas-md', JSON.stringify(notas));
+    }
+
+    function renderizarListaNotas() {
+      const lista = document.getElementById('note-list');
+      lista.innerHTML = '';
+      notas.forEach((n, i) => {
+        const btn = document.createElement('button');
+        btn.textContent = n.titulo || 'Sem título';
+        btn.className = (i === notaAtual ? 'selected' : '');
+        btn.onclick = () => selecionarNota(i);
+        lista.appendChild(btn);
+      });
+    }
+
+    function selecionarNota(i) {
+      notaAtual = i;
+      document.getElementById('note-title').value = notas[i].titulo;
+      document.getElementById('note-editor').value = notas[i].conteudo;
+      atualizarPreview();
+      renderizarListaNotas();
+    }
+
+    function novaNota() {
+      notas.unshift({ titulo: '', conteudo: '' });
+      notaAtual = 0;
+      salvarNotas();
+      renderizarListaNotas();
+      selecionarNota(0);
+    }
+
+    function excluirNota() {
+      if (notaAtual === null) return;
+      if (!confirm('Excluir esta nota?')) return;
+      notas.splice(notaAtual, 1);
+      if (notas.length === 0) {
+        notas = [];
+        notaAtual = null;
+        document.getElementById('note-title').value = '';
+        document.getElementById('note-editor').value = '';
+        document.getElementById('markdown-preview').innerHTML = '';
+      } else {
+        notaAtual = 0;
+        selecionarNota(0);
+      }
+      salvarNotas();
+      renderizarListaNotas();
+    }
+
+    function atualizarPreview() {
+      const md = document.getElementById('note-editor').value;
+      document.getElementById('markdown-preview').innerHTML = marked.parse(md);
+    }
+
+    document.getElementById('note-title').addEventListener('input', function() {
+      if (notaAtual === null) return;
+      notas[notaAtual].titulo = this.value;
+      salvarNotas();
+      renderizarListaNotas();
+    });
+    document.getElementById('note-editor').addEventListener('input', function() {
+      if (notaAtual === null) return;
+      notas[notaAtual].conteudo = this.value;
+      salvarNotas();
+      atualizarPreview();
+    });
+
+    // Inicialização
+    renderizarListaNotas();
+    if (notas.length > 0) selecionarNota(0);
+    else notaAtual = null;
+  </script>
+</body>
+</html> 

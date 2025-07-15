@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Gerador de Senhas Seguras</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 40px; }
+    .container { max-width: 400px; margin: auto; }
+    input[type="number"] { width: 60px; }
+    .senha { font-size: 1.2em; margin: 20px 0; word-break: break-all; }
+    button { margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Gerador de Senhas Seguras</h2>
+    <label>
+      Tamanho da senha:
+      <input type="number" id="tamanho" min="4" max="64" value="12">
+    </label>
+    <br><br>
+    <label><input type="checkbox" id="maiusculas" checked> Letras maiúsculas</label><br>
+    <label><input type="checkbox" id="minusculas" checked> Letras minúsculas</label><br>
+    <label><input type="checkbox" id="numeros" checked> Números</label><br>
+    <label><input type="checkbox" id="simbolos" checked> Símbolos</label><br>
+    <button onclick="gerarSenha()">Gerar Senha</button>
+    <div class="senha" id="senha"></div>
+    <button onclick="copiarSenha()">Copiar Senha</button>
+  </div>
+  <script>
+    function gerarSenha() {
+      const tamanho = document.getElementById('tamanho').value;
+      const maiusculas = document.getElementById('maiusculas').checked;
+      const minusculas = document.getElementById('minusculas').checked;
+      const numeros = document.getElementById('numeros').checked;
+      const simbolos = document.getElementById('simbolos').checked;
+
+      let chars = '';
+      if (maiusculas) chars += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      if (minusculas) chars += 'abcdefghijklmnopqrstuvwxyz';
+      if (numeros) chars += '0123456789';
+      if (simbolos) chars += '!@#$%^&*()_+[]{}|;:,.<>?';
+
+      if (!chars) {
+        document.getElementById('senha').textContent = 'Selecione pelo menos uma opção!';
+        return;
+      }
+
+      let senha = '';
+      for (let i = 0; i < tamanho; i++) {
+        senha += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      document.getElementById('senha').textContent = senha;
+    }
+
+    function copiarSenha() {
+      const senha = document.getElementById('senha').textContent;
+      if (!senha || senha === 'Selecione pelo menos uma opção!') return;
+      navigator.clipboard.writeText(senha);
+      alert('Senha copiada!');
+    }
+  </script>
+</body>
+</html>

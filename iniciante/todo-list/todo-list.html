@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Lista de Tarefas</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f7f7f7; margin: 0; padding: 0; }
+    .container { max-width: 400px; margin: 40px auto; background: #fff; padding: 24px; border-radius: 8px; box-shadow: 0 2px 8px #0001; }
+    h2 { text-align: center; }
+    .input-row { display: flex; gap: 8px; margin-bottom: 16px; }
+    .input-row input { flex: 1; padding: 8px; }
+    .todo-list { list-style: none; padding: 0; }
+    .todo-item { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid #eee; }
+    .todo-item:last-child { border-bottom: none; }
+    .todo-item.completed span { text-decoration: line-through; color: #888; }
+    .actions button { margin-left: 4px; }
+    .edit-input { flex: 1; padding: 4px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Lista de Tarefas</h2>
+    <div class="input-row">
+      <input type="text" id="nova-tarefa" placeholder="Digite uma nova tarefa...">
+      <button onclick="adicionarTarefa()">Adicionar</button>
+    </div>
+    <ul class="todo-list" id="lista-tarefas"></ul>
+  </div>
+  <script>
+    let tarefas = JSON.parse(localStorage.getItem('tarefas')) || [];
+
+    function salvarTarefas() {
+      localStorage.setItem('tarefas', JSON.stringify(tarefas));
+    }
+
+    function renderizarTarefas() {
+      const lista = document.getElementById('lista-tarefas');
+      lista.innerHTML = '';
+      tarefas.forEach((tarefa, i) => {
+        const li = document.createElement('li');
+        li.className = 'todo-item' + (tarefa.concluida ? ' completed' : '');
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = tarefa.concluida;
+        checkbox.onchange = () => {
+          tarefa.concluida = !tarefa.concluida;
+          salvarTarefas();
+          renderizarTarefas();
+        };
+
+        if (tarefa.editando) {
+          const input = document.createElement('input');
+          input.type = 'text';
+          input.value = tarefa.texto;
+          input.className = 'edit-input';
+          input.onkeydown = (e) => {
+            if (e.key === 'Enter') salvarEdicao(i, input.value);
+            if (e.key === 'Escape') cancelarEdicao(i);
+          };
+          li.appendChild(checkbox);
+          li.appendChild(input);
+          li.appendChild(criarBotao('Salvar', () => salvarEdicao(i, input.value)));
+          li.appendChild(criarBotao('Cancelar', () => cancelarEdicao(i)));
+        } else {
+          const span = document.createElement('span');
+          span.textContent = tarefa.texto;
+          li.appendChild(checkbox);
+          li.appendChild(span);
+          li.appendChild(criarBotao('Editar', () => editarTarefa(i)));
+          li.appendChild(criarBotao('Remover', () => removerTarefa(i)));
+        }
+
+        lista.appendChild(li);
+      });
+    }
+
+    function criarBotao(texto, onclick) {
+      const btn = document.createElement('button');
+      btn.textContent = texto;
+      btn.onclick = onclick;
+      return btn;
+    }
+
+    function adicionarTarefa() {
+      const input = document.getElementById('nova-tarefa');
+      const texto = input.value.trim();
+      if (!texto) return;
+      tarefas.push({ texto, concluida: false });
+      input.value = '';
+      salvarTarefas();
+      renderizarTarefas();
+    }
+
+    function removerTarefa(i) {
+      tarefas.splice(i, 1);
+      salvarTarefas();
+      renderizarTarefas();
+    }
+
+    function editarTarefa(i) {
+      tarefas[i].editando = true;
+      renderizarTarefas();
+      setTimeout(() => {
+        document.querySelector('.edit-input').focus();
+      }, 0);
+    }
+
+    function salvarEdicao(i, novoTexto) {
+      if (novoTexto.trim()) {
+        tarefas[i].texto = novoTexto.trim();
+      }
+      delete tarefas[i].editando;
+      salvarTarefas();
+      renderizarTarefas();
+    }
+
+    function cancelarEdicao(i) {
+      delete tarefas[i].editando;
+      renderizarTarefas();
+    }
+
+    // Permite adicionar tarefa com Enter
+    document.getElementById('nova-tarefa').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') adicionarTarefa();
+    });
+
+    renderizarTarefas();
+  </script>
+</body>
+</html>

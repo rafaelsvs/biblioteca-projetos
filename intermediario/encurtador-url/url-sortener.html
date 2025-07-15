@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Encurtador de URL</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: Arial, sans-serif; background: #f7f7f7; }
+    .container { max-width: 400px; margin: 40px auto; background: #fff; padding: 24px; border-radius: 10px; box-shadow: 0 2px 8px #0001; }
+    h2 { text-align: center; }
+    input, button { width: 100%; padding: 10px; margin: 8px 0; font-size: 1em; }
+    .short-link { text-align: center; margin: 16px 0; }
+    .stats { text-align: center; color: #555; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Encurtador de URL</h2>
+    <input type="url" id="url" placeholder="Cole a URL longa aqui..." required>
+    <button onclick="encurtar()">Encurtar</button>
+    <div class="short-link" id="short-link"></div>
+    <div class="stats" id="stats"></div>
+  </div>
+  <script>
+    const API = 'http://localhost:3000';
+
+    async function encurtar() {
+      const url = document.getElementById('url').value.trim();
+      if (!url) return alert('Digite uma URL!');
+      const res = await fetch(API + '/api/shorten', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url })
+      });
+      const data = await res.json();
+      if (data.short) {
+        const shortUrl = `${API}/${data.short}`;
+        document.getElementById('short-link').innerHTML = `<a href=\"${shortUrl}\" target=\"_blank\">${shortUrl}</a>`;
+        mostrarStats(data.short);
+      } else {
+        document.getElementById('short-link').textContent = data.error || 'Erro ao encurtar.';
+        document.getElementById('stats').textContent = '';
+      }
+    }
+
+    async function mostrarStats(short) {
+      const res = await fetch(`${API}/api/stats/${short}`);
+      const data = await res.json();
+      if (data.count !== undefined) {
+        document.getElementById('stats').textContent = `Acessos: ${data.count}`;
+      } else {
+        document.getElementById('stats').textContent = '';
+      }
+    }
+  </script>
+</body>
+</html>

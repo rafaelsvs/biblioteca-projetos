@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Conversor de Moedas</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: Arial, sans-serif; background: #f7f7f7; margin: 0; }
+    .container {
+      max-width: 400px;
+      margin: 40px auto;
+      background: #fff;
+      padding: 24px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px #0001;
+    }
+    h2 { text-align: center; }
+    .row { display: flex; gap: 8px; margin-bottom: 16px; }
+    .row select, .row input { flex: 1; padding: 8px; font-size: 1em; }
+    .result { text-align: center; font-size: 1.3em; margin-top: 20px; }
+    .rate { text-align: center; color: #888; font-size: 0.95em; margin-top: 8px; }
+    button { width: 100%; padding: 10px; font-size: 1em; background: #4caf50; color: #fff; border: none; border-radius: 5px; cursor: pointer; margin-top: 10px; }
+    button:hover { background: #388e3c; }
+    @media (max-width: 450px) {
+      .container { padding: 10px; }
+      .row select, .row input { font-size: 0.95em; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Conversor de Moedas</h2>
+    <div class="row">
+      <input type="number" id="valor" placeholder="Valor" min="0" step="any">
+    </div>
+    <div class="row">
+      <select id="moeda-origem"></select>
+      <select id="moeda-destino"></select>
+    </div>
+    <button onclick="converterMoeda()">Converter</button>
+    <div class="result" id="resultado"></div>
+    <div class="rate" id="taxa"></div>
+  </div>
+  <script>
+    const moedas = [
+      'USD', 'BRL', 'EUR', 'GBP', 'JPY', 'ARS', 'CAD', 'AUD', 'CHF', 'CNY', 'INR'
+    ];
+    const selectOrigem = document.getElementById('moeda-origem');
+    const selectDestino = document.getElementById('moeda-destino');
+    const valorInput = document.getElementById('valor');
+    const resultadoDiv = document.getElementById('resultado');
+    const taxaDiv = document.getElementById('taxa');
+    let taxas = {};
+
+    function popularSelects() {
+      moedas.forEach(m => {
+        const opt1 = document.createElement('option');
+        opt1.value = m; opt1.textContent = m;
+        selectOrigem.appendChild(opt1);
+        const opt2 = document.createElement('option');
+        opt2.value = m; opt2.textContent = m;
+        selectDestino.appendChild(opt2);
+      });
+      selectOrigem.value = 'USD';
+      selectDestino.value = 'BRL';
+    }
+
+    async function atualizarTaxas() {
+      // Usando API gratuita: https://api.exchangerate.host/latest
+      const res = await fetch('https://api.exchangerate.host/latest?base=USD');
+      const data = await res.json();
+      taxas = data.rates;
+    }
+
+    async function converterMoeda() {
+      const valor = parseFloat(valorInput.value);
+      const origem = selectOrigem.value;
+      const destino = selectDestino.value;
+      if (isNaN(valor) || valor < 0) {
+        resultadoDiv.textContent = 'Digite um valor válido.';
+        taxaDiv.textContent = '';
+        return;
+      }
+      if (!taxas[origem] || !taxas[destino]) {
+        resultadoDiv.textContent = 'Taxas de câmbio não disponíveis.';
+        taxaDiv.textContent = '';
+        return;
+      }
+      // Converter para USD, depois para destino
+      const valorUSD = valor / taxas[origem];
+      const convertido = valorUSD * taxas[destino];
+      resultadoDiv.textContent = `${valor.toLocaleString('pt-BR', {style:'currency', currency: origem})} = ${convertido.toLocaleString('pt-BR', {style:'currency', currency: destino})}`;
+      taxaDiv.textContent = `1 ${origem} = ${(taxas[destino]/taxas[origem]).toFixed(4)} ${destino}`;
+    }
+
+    async function inicializar() {
+      popularSelects();
+      await atualizarTaxas();
+      converterMoeda();
+    }
+
+    selectOrigem.addEventListener('change', converterMoeda);
+    selectDestino.addEventListener('change', converterMoeda);
+    valorInput.addEventListener('input', converterMoeda);
+
+    inicializar();
+  </script>
+</body>
+</html> 

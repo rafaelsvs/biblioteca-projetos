@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Calculadora Simples</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: Arial, sans-serif; background: #f7f7f7; margin: 0; }
+    .container {
+      max-width: 340px;
+      margin: 40px auto;
+      background: #fff;
+      padding: 24px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px #0001;
+    }
+    .display {
+      width: 100%;
+      font-size: 2em;
+      padding: 10px;
+      margin-bottom: 10px;
+      text-align: right;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      background: #f0f0f0;
+      box-sizing: border-box;
+    }
+    .buttons {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+    button {
+      font-size: 1.2em;
+      padding: 16px 0;
+      border: none;
+      border-radius: 5px;
+      background: #e0e0e0;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    button:hover { background: #d0d0d0; }
+    .history {
+      margin-top: 20px;
+      background: #fafafa;
+      border-radius: 5px;
+      padding: 10px;
+      max-height: 120px;
+      overflow-y: auto;
+      font-size: 0.95em;
+      border: 1px solid #eee;
+    }
+    .history-title {
+      font-weight: bold;
+      margin-bottom: 6px;
+    }
+    @media (max-width: 400px) {
+      .container { padding: 10px; }
+      .display { font-size: 1.3em; }
+      button { font-size: 1em; padding: 10px 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div id="display" class="display">0</div>
+    <div class="buttons">
+      <button onclick="press('7')">7</button>
+      <button onclick="press('8')">8</button>
+      <button onclick="press('9')">9</button>
+      <button onclick="press('/')">÷</button>
+      <button onclick="press('4')">4</button>
+      <button onclick="press('5')">5</button>
+      <button onclick="press('6')">6</button>
+      <button onclick="press('*')">×</button>
+      <button onclick="press('1')">1</button>
+      <button onclick="press('2')">2</button>
+      <button onclick="press('3')">3</button>
+      <button onclick="press('-')">−</button>
+      <button onclick="press('0')">0</button>
+      <button onclick="press('.')">.</button>
+      <button onclick="clearDisplay()">C</button>
+      <button onclick="press('+')">+</button>
+      <button onclick="calculate()" style="grid-column: span 4; background: #4caf50; color: #fff;">=</button>
+    </div>
+    <div class="history">
+      <div class="history-title">Histórico</div>
+      <div id="history-list"></div>
+    </div>
+  </div>
+  <script>
+    let current = '';
+    let history = JSON.parse(localStorage.getItem('calc-history') || '[]');
+
+    function updateDisplay() {
+      document.getElementById('display').textContent = current || '0';
+    }
+
+    function press(val) {
+      if (val === '.' && current.split(/\+|\-|\*|\//).pop().includes('.')) return;
+      current += val;
+      updateDisplay();
+    }
+
+    function clearDisplay() {
+      current = '';
+      updateDisplay();
+    }
+
+    function calculate() {
+      try {
+        // eslint-disable-next-line no-eval
+        let result = eval(current.replace(/[^-+*/.\d]/g, ''));
+        if (result === undefined || isNaN(result)) return;
+        addToHistory(current + ' = ' + result);
+        current = result.toString();
+        updateDisplay();
+      } catch {
+        current = 'Erro';
+        updateDisplay();
+        setTimeout(clearDisplay, 1000);
+      }
+    }
+
+    function addToHistory(entry) {
+      history.unshift(entry);
+      if (history.length > 10) history = history.slice(0, 10);
+      localStorage.setItem('calc-history', JSON.stringify(history));
+      renderHistory();
+    }
+
+    function renderHistory() {
+      document.getElementById('history-list').innerHTML =
+        history.map(h => `<div>${h}</div>`).join('');
+    }
+
+    // Atualiza resultado em tempo real ao digitar
+    document.addEventListener('keydown', function(e) {
+      if ('0123456789+-*/.'.includes(e.key)) {
+        press(e.key);
+      } else if (e.key === 'Enter') {
+        calculate();
+      } else if (e.key === 'Backspace') {
+        current = current.slice(0, -1);
+        updateDisplay();
+      } else if (e.key === 'Escape') {
+        clearDisplay();
+      }
+    });
+
+    // Exibe resultado em tempo real ao digitar
+    document.querySelector('.container').addEventListener('input', function() {
+      try {
+        let result = eval(current.replace(/[^-+*/.\d]/g, ''));
+        if (result !== undefined && !isNaN(result)) {
+          document.getElementById('display').textContent = result;
+        }
+      } catch {}
+    });
+
+    renderHistory();
+    updateDisplay();
+  </script>
+</body>
+</html>

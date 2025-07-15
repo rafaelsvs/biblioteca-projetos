@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Login JWT</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: Arial, sans-serif; background: #f7f7f7; }
+    .container { max-width: 350px; margin: 40px auto; background: #fff; padding: 24px; border-radius: 10px; box-shadow: 0 2px 8px #0001; }
+    h2 { text-align: center; }
+    input, button { width: 100%; padding: 10px; margin: 8px 0; font-size: 1em; }
+    .msg { text-align: center; color: #e53935; }
+    .success { color: #388e3c; }
+    .private { margin-top: 20px; background: #e0f2f1; padding: 10px; border-radius: 5px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Login JWT</h2>
+    <div id="forms">
+      <input type="text" id="username" placeholder="Usuário">
+      <input type="password" id="password" placeholder="Senha">
+      <button onclick="login()">Entrar</button>
+      <button onclick="register()">Cadastrar</button>
+      <div class="msg" id="msg"></div>
+    </div>
+    <div id="private" class="private" style="display:none"></div>
+    <button onclick="logout()" id="logout" style="display:none">Sair</button>
+  </div>
+  <script>
+    const API = 'http://localhost:3001';
+    let token = localStorage.getItem('jwt-token') || '';
+
+    function showMsg(msg, success=false) {
+      const el = document.getElementById('msg');
+      el.textContent = msg;
+      el.className = 'msg' + (success ? ' success' : '');
+    }
+
+    async function login() {
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+      if (!username || !password) return showMsg('Preencha todos os campos.');
+      const res = await fetch(API + '/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+      const data = await res.json();
+      if (data.token) {
+        token = data.token;
+        localStorage.setItem('jwt-token', token);
+        showMsg('Login realizado!', true);
+        mostrarPrivado();
+      } else {
+        showMsg(data.error || 'Erro no login.');
+      }
+    }
+
+    async function register() {
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+      if (!username || !password) return showMsg('Preencha todos os campos.');
+      const res = await fetch(API + '/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+      const data = await res.json();
+      if (data.message) {
+        showMsg(data.message, true);
+      } else {
+        showMsg(data.error || 'Erro no cadastro.');
+      }
+    }
+
+    async function mostrarPrivado() {
+      if (!token) return;
+      const res = await fetch(API + '/api/private', {
+        headers: { Authorization: 'Bearer ' + token }
+      });
+      const data = await res.json();
+      if (data.message) {
+        document.getElementById('forms').style.display = 'none';
+        document.getElementById('private').style.display = '';
+        document.getElementById('private').textContent = data.message;
+        document.getElementById('logout').style.display = '';
+      } else {
+        showMsg(data.error || 'Acesso negado.');
+        logout();
+      }
+    }
+
+    function logout() {
+      token = '';
+      localStorage.removeItem('jwt-token');
+      document.getElementById('forms').style.display = '';
+      document.getElementById('private').style.display = 'none';
+      document.getElementById('logout').style.display = 'none';
+      showMsg('');
+    }
+
+    if (token) mostrarPrivado();
+  </script>
+</body>
+</html>

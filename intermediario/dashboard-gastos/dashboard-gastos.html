@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Dashboard de Gastos Pessoais</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f7f7f7; margin: 0; }
+    .container { max-width: 800px; margin: 40px auto; background: #fff; padding: 24px; border-radius: 10px; box-shadow: 0 2px 8px #0001; }
+    h2 { text-align: center; }
+    form { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+    form input, form select, form button { padding: 8px; font-size: 1em; }
+    form input[type='number'] { width: 100px; }
+    form select { min-width: 120px; }
+    form button { background: #4caf50; color: #fff; border: none; border-radius: 5px; cursor: pointer; }
+    form button:hover { background: #388e3c; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+    th, td { padding: 8px; border-bottom: 1px solid #eee; text-align: left; }
+    th { background: #f0f0f0; }
+    .entrada { color: #388e3c; }
+    .saida { color: #e53935; }
+    .remove-btn { background: #e53935; color: #fff; border: none; border-radius: 5px; padding: 4px 8px; cursor: pointer; }
+    .remove-btn:hover { background: #b71c1c; }
+    .charts { display: flex; gap: 24px; flex-wrap: wrap; justify-content: center; }
+    .chart-container { width: 320px; }
+    @media (max-width: 900px) {
+      .container { padding: 10px; }
+      .charts { flex-direction: column; align-items: center; }
+      .chart-container { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Dashboard de Gastos Pessoais</h2>
+    <form id="form-mov">
+      <input type="text" id="desc" placeholder="Descrição" required>
+      <input type="number" id="valor" placeholder="Valor" step="0.01" required>
+      <select id="tipo">
+        <option value="entrada">Entrada</option>
+        <option value="saida">Saída</option>
+      </select>
+      <select id="cat">
+        <option value="Salário">Salário</option>
+        <option value="Alimentação">Alimentação</option>
+        <option value="Transporte">Transporte</option>
+        <option value="Lazer">Lazer</option>
+        <option value="Saúde">Saúde</option>
+        <option value="Educação">Educação</option>
+        <option value="Outros">Outros</option>
+      </select>
+      <button type="submit">Adicionar</button>
+    </form>
+    <table>
+      <thead>
+        <tr>
+          <th>Descrição</th>
+          <th>Valor</th>
+          <th>Tipo</th>
+          <th>Categoria</th>
+          <th>Remover</th>
+        </tr>
+      </thead>
+      <tbody id="mov-list"></tbody>
+    </table>
+    <div class="charts">
+      <div class="chart-container">
+        <canvas id="pie-categorias"></canvas>
+      </div>
+      <div class="chart-container">
+        <canvas id="bar-mes"></canvas>
+      </div>
+    </div>
+  </div>
+  <script>
+    let movs = JSON.parse(localStorage.getItem('gastos-movs') || '[]');
+
+    function salvar() {
+      localStorage.setItem('gastos-movs', JSON.stringify(movs));
+    }
+
+    function renderizarTabela() {
+      const tbody = document.getElementById('mov-list');
+      tbody.innerHTML = '';
+      movs.forEach((m, i) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${m.desc}</td>
+          <td class="${m.tipo}">${Number(m.valor).toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</td>
+          <td>${m.tipo === 'entrada' ? 'Entrada' : 'Saída'}</td>
+          <td>${m.cat}</td>
+          <td><button class="remove-btn" onclick="removerMov(${i})">X</button></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function removerMov(i) {
+      movs.splice(i, 1);
+      salvar();
+      renderizarTabela();
+      renderizarGraficos();
+    }
+
+    document.getElementById('form-mov').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const desc = document.getElementById('desc').value.trim();
+      const valor = parseFloat(document.getElementById('valor').value);
+      const tipo = document.getElementById('tipo').value;
+      const cat = document.getElementById('cat').value;
+      if (!desc || isNaN(valor)) return;
+      movs.push({ desc, valor, tipo, cat, data: new Date().toISOString() });
+      salvar();
+      this.reset();
+      renderizarTabela();
+      renderizarGraficos();
+    });
+
+    // Gráfico de pizza por categoria (somente saídas)
+    let pieChart, barChart;
+    function renderizarGraficos() {
+      // Pie chart por categoria
+      const cats = {};
+      movs.filter(m => m.tipo === 'saida').forEach(m => {
+        cats[m.cat] = (cats[m.cat] || 0) + Number(m.valor);
+      });
+      const pieData = {
+        labels: Object.keys(cats),
+        datasets: [{
+          data: Object.values(cats),
+          backgroundColor: [
+            '#e53935', '#fb8c00', '#43a047', '#1e88e5', '#8e24aa', '#fbc02d', '#757575'
+          ]
+        }]
+      };
+      if (pieChart) pieChart.destroy();
+      pieChart = new Chart(document.getElementById('pie-categorias'), {
+        type: 'pie',
+        data: pieData,
+        options: { plugins: { legend: { position: 'bottom' } } }
+      });
+
+      // Bar chart por mês (entradas e saídas)
+      const meses = {};
+      movs.forEach(m => {
+        const mes = new Date(m.data).toLocaleString('pt-BR', { month: 'short', year: '2-digit' });
+        if (!meses[mes]) meses[mes] = { entrada: 0, saida: 0 };
+        meses[mes][m.tipo] += Number(m.valor);
+      });
+      const labels = Object.keys(meses);
+      const barData = {
+        labels,
+        datasets: [
+          {
+            label: 'Entradas',
+            data: labels.map(m => meses[m].entrada),
+            backgroundColor: '#43a047'
+          },
+          {
+            label: 'Saídas',
+            data: labels.map(m => meses[m].saida),
+            backgroundColor: '#e53935'
+          }
+        ]
+      };
+      if (barChart) barChart.destroy();
+      barChart = new Chart(document.getElementById('bar-mes'), {
+        type: 'bar',
+        data: barData,
+        options: {
+          plugins: { legend: { position: 'bottom' } },
+          responsive: true,
+          scales: { y: { beginAtZero: true } }
+        }
+      });
+    }
+
+    renderizarTabela();
+    renderizarGraficos();
+  </script>
+</body>
+</html>
